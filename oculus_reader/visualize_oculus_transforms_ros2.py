@@ -35,9 +35,20 @@ class OculusReaderNode(Node):
 
         # service
         self.tele_cli = self.create_client(SetBool, '/teleop_start')
-        self.dataset_record_cli = self.create_client(Trigger, '/start_recording')
-        self.dataset_stop_cli = self.create_client(SetBool, '/stop_recording')
-        self.phase_state_cli = self.create_client(Trigger, '/stage_up')
+        self.dataset_record_cli1 = self.create_client(Trigger, '/start_recording')
+        self.dataset_stop_cli1 = self.create_client(SetBool, '/stop_recording')
+        self.phase_state_cli1 = self.create_client(Trigger, '/stage_up')
+
+        self.dataset_record_cli2 = self.create_client(Trigger, '/takeoff/start_recording')
+        self.dataset_stop_cli2 = self.create_client(SetBool, '/takeoff/stop_recording')
+        self.phase_state_cli2 = self.create_client(Trigger, 'takeoff/stage_up')
+
+        self.services_switched = False
+        # start with hangging data collection services
+        self.dataset_record_cli = self.dataset_record_cli1
+        self.dataset_stop_cli = self.dataset_stop_cli1
+        self.phase_state_cli = self.phase_state_cli1
+
         self.button_count_poll= 0
         self.button_info_init = False
         self.button_triggered_dict = {}
@@ -201,6 +212,24 @@ class OculusReaderNode(Node):
             
         elif not buttons['RG'] and self.button_triggered_dict['RG']:
             self.button_triggered_dict['RG'] = False
+
+        if buttons['leftJS'][0] > 0.8 and not self.button_triggered_dict['leftJS']:
+            self.button_triggered_dict['leftJS'] = True
+            if self.services_switched:
+                self.services_switched = False
+                self.dataset_record_cli = self.dataset_record_cli1
+                self.dataset_stop_cli = self.dataset_stop_cli1
+                self.phase_state_cli = self.phase_state_cli1
+                self.get_logger().info('Switched to hangging data collection services')
+            else:
+                self.services_switched = True
+                self.dataset_record_cli = self.dataset_record_cli2
+                self.dataset_stop_cli = self.dataset_stop_cli2
+                self.phase_state_cli = self.phase_state_cli2
+                self.get_logger().info('Switched to takeoff data collection services')
+                
+        elif buttons['leftJS'][0] < 0.2 and self.button_triggered_dict['leftJS']:
+            self.button_triggered_dict['leftJS'] = False
 
         if buttons['rightJS'][0] > 0.8 and not self.button_triggered_dict['rightJS']:
             self.button_triggered_dict['rightJS'] = True
