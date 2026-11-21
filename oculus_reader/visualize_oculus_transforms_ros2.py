@@ -37,7 +37,7 @@ class OculusReaderNode(Node):
         self.tele_cli = self.create_client(SetBool, '/teleop_start')
         self.dataset_record_cli1 = self.create_client(Trigger, '/start_recording')
         self.dataset_stop_cli1 = self.create_client(SetBool, '/stop_recording')
-        self.phase_state_cli1 = self.create_client(Trigger, '/stage_up')
+        self.phase_state_cli1 = self.create_client(SetBool, '/stage_up')
 
         self.dataset_record_cli2 = self.create_client(Trigger, '/takeoff/start_recording')
         self.dataset_stop_cli2 = self.create_client(SetBool, '/takeoff/stop_recording')
@@ -215,18 +215,18 @@ class OculusReaderNode(Node):
 
         if buttons['leftJS'][0] > 0.8 and not self.button_triggered_dict['leftJS']:
             self.button_triggered_dict['leftJS'] = True
-            if self.services_switched:
-                self.services_switched = False
-                self.dataset_record_cli = self.dataset_record_cli1
-                self.dataset_stop_cli = self.dataset_stop_cli1
-                self.phase_state_cli = self.phase_state_cli1
-                self.get_logger().info('Switched to hangging data collection services')
-            else:
-                self.services_switched = True
-                self.dataset_record_cli = self.dataset_record_cli2
-                self.dataset_stop_cli = self.dataset_stop_cli2
-                self.phase_state_cli = self.phase_state_cli2
-                self.get_logger().info('Switched to takeoff data collection services')
+            # if self.services_switched:
+            #     self.services_switched = False
+            #     self.dataset_record_cli = self.dataset_record_cli1
+            #     self.dataset_stop_cli = self.dataset_stop_cli1
+            #     self.phase_state_cli = self.phase_state_cli1
+            #     self.get_logger().info('Switched to hangging data collection services')
+            # else:
+            #     self.services_switched = True
+            #     self.dataset_record_cli = self.dataset_record_cli2
+            #     self.dataset_stop_cli = self.dataset_stop_cli2
+            #     self.phase_state_cli = self.phase_state_cli2
+            #     self.get_logger().info('Switched to takeoff data collection services')
                 
         elif buttons['leftJS'][0] < 0.2 and self.button_triggered_dict['leftJS']:
             self.button_triggered_dict['leftJS'] = False
@@ -235,13 +235,26 @@ class OculusReaderNode(Node):
             self.button_triggered_dict['rightJS'] = True
             # phase up
             if self.phase_state_cli.wait_for_service(timeout_sec=1.0):
-                req = Trigger.Request()
+                req = SetBool.Request()
+                req.data = True
                 result = self.phase_state_cli.call(req)
                 self.get_logger().info(f'Result of service call: {result.success}, message: {result.message}')
             else:
                 self.get_logger().error('Service not available')
-        elif buttons['rightJS'][0] < 0.2 and self.button_triggered_dict['rightJS']:
+        elif buttons['rightJS'][0] < -0.8 and not self.button_triggered_dict['rightJS']:
+            self.button_triggered_dict['rightJS'] = True
+            # phase down
+            if self.phase_state_cli.wait_for_service(timeout_sec=1.0):
+                req = SetBool.Request()
+                req.data = False
+                result = self.phase_state_cli.call(req)
+                self.get_logger().info(f'Result of service call: {result.success}, message: {result.message}')
+            else:
+                self.get_logger().error('Service not available')
+        elif buttons['rightJS'][0] < 0.2 and buttons['rightJS'][0] > -0.2 and self.button_triggered_dict['rightJS']:
             self.button_triggered_dict['rightJS'] = False
+
+
 
         # Using LeftGrasp control left gripper to  decrease accidental triggering
         if buttons['leftGrip'][0] > 0.99 and not self.button_triggered_dict['leftGrip']:
